@@ -15,6 +15,7 @@ Manually resummarize and rename every root Codex session as `YYYY-MM-DD｜Core t
 | Full manual run | Renames every root Codex session, including already-dated and archived sessions. |
 | Conversation-aware language | By default, each title follows its own session's dominant user language. |
 | Optional language | `language=<language>` forces one language for all titles and user-visible output. |
+| Token efficiency | Prefers a token-efficient model when model selection is available and uses compact session context. |
 | Scope protection | Excludes ChatGPT conversations and subagent sessions. |
 | No automation | Runs only when you explicitly invoke the Skill. |
 
@@ -143,7 +144,6 @@ The script only reads local files. It does not decide the new title, change the 
 
 - Title quality depends on the meaningful context available in each session.
 - The collector relies on Codex's current local file layout.
-- A full run can consume substantial tokens because every root session is resummarized.
 - There is no built-in title history or automatic rollback.
 
 ## License
