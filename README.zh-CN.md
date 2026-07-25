@@ -122,3 +122,7 @@ Codex 会使用内置的 Skill Installer，把 Skill 安装到 `$CODEX_HOME/skil
 - 创建日期目前统一按 `Asia/Tokyo` 时区格式化。
 - 全量执行会重新总结所有根会话，因此可能消耗较多 token。
 - 没有内置标题历史或自动回滚。
+
+## 许可证
+
+MIT，详见 [LICENSE](LICENSE)。

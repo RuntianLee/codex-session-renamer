@@ -122,3 +122,7 @@ The collector only reads local metadata and rollout files. It does not write dir
 - Creation dates are currently formatted in the `Asia/Tokyo` time zone.
 - A full run can consume substantial tokens because every root session is resummarized.
 - There is no built-in title history or automatic rollback.
+
+## License
+
+MIT - see [LICENSE](LICENSE).
