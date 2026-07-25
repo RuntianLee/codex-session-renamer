@@ -1,0 +1,4 @@
+interface:
+  display_name: "Codex Session Renamer"
+  short_description: "Manually rename every Codex session from its date and core topic"
+  default_prompt: "Use $codex-session-renamer to manually resummarize and rename every root Codex session, choosing title and report languages from the conversations unless language=<language> is provided."
