@@ -88,7 +88,31 @@ Replace `English` with a language name or BCP-47 tag such as `zh-CN` or `ja`.
 6. Temporarily unarchives archived tasks, renames them, and restores their archived state.
 7. Continues until every root session has been considered.
 
-The collector only reads local metadata and rollout files. It does not write directly to the Codex database or session files.
+## What `agents/` and `scripts/` do
+
+### `agents/`
+
+This folder contains `openai.yaml`. It tells Codex how to display the Skill:
+
+- its name;
+- its short description;
+- the example prompt shown when starting it.
+
+It improves the experience in Codex, but it does not scan or rename sessions.
+
+### `scripts/`
+
+This folder contains the helper that prepares session information for Codex. It is required for a reliable full scan.
+
+In simple terms, the script:
+
+1. finds normal root sessions in Codex's local session list;
+2. skips ChatGPT conversations and subagent sessions;
+3. opens each stored conversation and keeps only the current title, creation date, two recent user requests, and final result;
+4. removes noisy content such as attached Skill text, code blocks, and page markup;
+5. returns up to 20 short session summaries at a time for Codex to rename.
+
+The script only reads local files. It does not decide the new title, change the database, or rename anything by itself. Codex writes the title through its official session tools.
 
 ## Safety and privacy
 
@@ -118,7 +142,7 @@ The collector only reads local metadata and rollout files. It does not write dir
 ## Limitations
 
 - Title quality depends on the meaningful context available in each session.
-- The collector relies on Codex's current local SQLite schema and rollout format.
+- The collector relies on Codex's current local file layout.
 - Creation dates are currently formatted in the `Asia/Tokyo` time zone.
 - A full run can consume substantial tokens because every root session is resummarized.
 - There is no built-in title history or automatic rollback.
