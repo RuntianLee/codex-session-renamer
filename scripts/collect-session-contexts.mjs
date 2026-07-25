@@ -43,7 +43,6 @@ const raw = execFileSync("sqlite3", ["-json", db, query], {
 });
 const rows = raw.trim() ? JSON.parse(raw) : [];
 const formatter = new Intl.DateTimeFormat("en-CA", {
-  timeZone: "Asia/Tokyo",
   year: "numeric",
   month: "2-digit",
   day: "2-digit",

@@ -11,7 +11,7 @@ Manually resummarize and rename every root Codex session as `YYYY-MM-DD｜Core t
 | Capability | Behavior |
 | --- | --- |
 | Semantic titles | Uses the dominant goal, actual outcome, or final conclusion. |
-| Creation date | Prefixes every title with its session creation date. |
+| Creation date | Prefixes every title with its session creation date in the system's current time zone. |
 | Full manual run | Renames every root Codex session, including already-dated and archived sessions. |
 | Conversation-aware language | By default, each title follows its own session's dominant user language. |
 | Optional language | `language=<language>` forces one language for all titles and user-visible output. |
@@ -143,7 +143,6 @@ The script only reads local files. It does not decide the new title, change the 
 
 - Title quality depends on the meaningful context available in each session.
 - The collector relies on Codex's current local file layout.
-- Creation dates are currently formatted in the `Asia/Tokyo` time zone.
 - A full run can consume substantial tokens because every root session is resummarized.
 - There is no built-in title history or automatic rollback.
 
