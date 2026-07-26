@@ -1,6 +1,6 @@
 ---
 name: codex-session-renamer
-description: Use when every root Codex session needs manual semantic renaming with its creation date.
+description: Use when every root Codex session needs manual semantic renaming.
 ---
 
 # Codex Session Renamer
@@ -22,7 +22,7 @@ Invoking `$codex-session-renamer` always resummarizes and renames every root Cod
 ## Naming Rules
 
 1. Build `YYYY-MM-DD｜Core topic summary`.
-2. Format the creation date in the system's current local time zone.
+2. Use the last meaningful conversation date in the system's current local time zone. Ignore assistant commentary and fall back to the creation date only when no valid conversation timestamp exists.
 3. Write an original 10-28 character topic that conveys the dominant work and outcome at a glance.
 4. Prefer the final meaningful result or evolved goal over the initial request.
 5. Preserve distinguishing project, feature, PR, model, or document identifiers.

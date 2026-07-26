@@ -11,7 +11,7 @@ Manually resummarize and rename every root Codex session as `YYYY-MM-DD｜Core t
 | Capability | Behavior |
 | --- | --- |
 | Semantic titles | Uses the dominant goal, actual outcome, or final conclusion. |
-| Creation date | Prefixes every title with its session creation date in the system's current time zone. |
+| Last conversation date | Prefixes every title with the date of its last meaningful conversation in the system's current time zone. |
 | Full manual run | Renames every root Codex session, including already-dated and archived sessions. |
 | Conversation-aware language | By default, each title follows its own session's dominant user language. |
 | Optional language | `language=<language>` forces one language for all titles and user-visible output. |
@@ -26,6 +26,8 @@ The title format is:
 ```text
 YYYY-MM-DD｜Core topic summary
 ```
+
+The date comes from the last meaningful user message or assistant answer. Progress commentary is ignored. If no valid conversation timestamp is available, the creation date is used instead.
 
 Without a language option:
 
@@ -83,7 +85,7 @@ Replace `English` with a language name or BCP-47 tag such as `zh-CN` or `ja`.
 
 1. Retrieves concise summaries for the 50 most recent Codex tasks.
 2. Reads root-session metadata and compact local context in batches of 20.
-3. Extracts each current title, recent meaningful user goals, and final result.
+3. Extracts each last meaningful conversation date, current title, recent meaningful user goals, and final result.
 4. Chooses the required language and writes a concise semantic topic.
 5. Renames through Codex's official thread tools.
 6. Temporarily unarchives archived tasks, renames them, and restores their archived state.
@@ -109,7 +111,7 @@ In simple terms, the script:
 
 1. finds normal root sessions in Codex's local session list;
 2. skips ChatGPT conversations and subagent sessions;
-3. opens each stored conversation and keeps only the current title, creation date, two recent user requests, and final result;
+3. opens each stored conversation and keeps only the last meaningful conversation date, current title, two recent user requests, and final result;
 4. removes noisy content such as attached Skill text, code blocks, and page markup;
 5. returns up to 20 short session summaries at a time for Codex to rename.
 

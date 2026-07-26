@@ -87,6 +87,7 @@ function messageText(payload) {
 function collectContext(row) {
   const users = [];
   const assistants = [];
+  let lastConversationAtMs = null;
 
   if (row.rollout_path && existsSync(row.rollout_path)) {
     for (const line of readFileSync(row.rollout_path, "utf8").split("\n")) {
@@ -100,6 +101,17 @@ function collectContext(row) {
       }
       const payload = event.payload || {};
       if (event.type !== "response_item" || payload.type !== "message") continue;
+
+      const messageAtMs = Date.parse(event.timestamp);
+      const isConversationMessage = payload.role === "user"
+        || (payload.role === "assistant" && payload.phase !== "commentary");
+      if (
+        isConversationMessage
+        && Number.isFinite(messageAtMs)
+        && (lastConversationAtMs === null || messageAtMs > lastConversationAtMs)
+      ) {
+        lastConversationAtMs = messageAtMs;
+      }
 
       const text = cleanText(messageText(payload));
       if (text.length < 8) continue;
@@ -117,18 +129,22 @@ function collectContext(row) {
   if (assistants.length) {
     parts.push(`Final result: ${excerpt(assistants.at(-1), 360)}`);
   }
-  return parts.join("\n");
+  return {
+    context: parts.join("\n"),
+    lastConversationAtMs,
+  };
 }
 
 const selectedRows = rows.slice(offset, offset + limit);
 const sessions = selectedRows.map(row => {
   const title = cleanText(row.title || "");
+  const collected = collectContext(row);
   return {
     id: row.id,
-    date: formatDate(row.created_at_ms),
+    date: formatDate(collected.lastConversationAtMs ?? row.created_at_ms),
     currentTitle: title,
     archived: Boolean(row.archived),
-    context: collectContext(row),
+    context: collected.context,
   };
 });
 const nextOffset = offset + sessions.length < rows.length
