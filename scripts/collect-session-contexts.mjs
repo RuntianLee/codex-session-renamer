@@ -69,6 +69,38 @@ function cleanText(value) {
     .trim();
 }
 
+function meaningfulUserGoal(value) {
+  let text = cleanText(value);
+  const requestMarkers = [
+    "## My request for Codex:",
+    "My request for Codex:",
+  ];
+  for (const marker of requestMarkers) {
+    const markerIndex = text.lastIndexOf(marker);
+    if (markerIndex !== -1) {
+      text = text.slice(markerIndex + marker.length).trim();
+      break;
+    }
+  }
+
+  if (!text || /^\[?Request interrupted by user/i.test(text)) return "";
+  if (/^#?\s*AGENTS\.md instructions\b/i.test(text)) return "";
+  if (/^These AGENTS\.md instructions\b/i.test(text)) return "";
+  if (/^\d{4}-\d{2}-\d{2}\s+\S+\/\S+\s+\//.test(text)) return "";
+  if (/\btoolu_[A-Za-z0-9]+\b/.test(text) && /\b(completed|failed|stopped)\b/i.test(text)) {
+    return "";
+  }
+  return text;
+}
+
+function sampleAcross(values, maxSamples) {
+  if (values.length <= maxSamples) return values;
+  const indexes = Array.from({ length: maxSamples }, (_, index) =>
+    Math.round(index * (values.length - 1) / (maxSamples - 1))
+  );
+  return indexes.map(index => values[index]);
+}
+
 function excerpt(value, maxLength) {
   const chars = Array.from(cleanText(value));
   if (chars.length <= maxLength) return chars.join("");
@@ -103,31 +135,33 @@ function collectContext(row) {
       if (event.type !== "response_item" || payload.type !== "message") continue;
 
       const messageAtMs = Date.parse(event.timestamp);
-      const isConversationMessage = payload.role === "user"
-        || (payload.role === "assistant" && payload.phase !== "commentary");
-      if (
-        isConversationMessage
-        && Number.isFinite(messageAtMs)
-        && (lastConversationAtMs === null || messageAtMs > lastConversationAtMs)
-      ) {
+      const isUser = payload.role === "user";
+      const isAssistantResult = payload.role === "assistant"
+        && payload.phase !== "commentary";
+      if (!isUser && !isAssistantResult) continue;
+
+      const text = isUser
+        ? meaningfulUserGoal(messageText(payload))
+        : cleanText(messageText(payload));
+      if (text.length < 8) continue;
+      if (Number.isFinite(messageAtMs)
+        && (lastConversationAtMs === null || messageAtMs > lastConversationAtMs)) {
         lastConversationAtMs = messageAtMs;
       }
-
-      const text = cleanText(messageText(payload));
-      if (text.length < 8) continue;
-      if (payload.role === "user") users.push(text);
-      if (payload.role === "assistant") assistants.push(text);
+      if (isUser) users.push(text);
+      if (isAssistantResult) assistants.push(text);
     }
   }
 
   const parts = [];
   const currentTitle = cleanText(row.title || "");
   if (currentTitle) parts.push(`Current title: ${excerpt(currentTitle, 80)}`);
-  for (const goal of users.slice(-2)) {
-    parts.push(`Recent goal: ${excerpt(goal, 240)}`);
+  const sampledGoals = sampleAcross(users, 4);
+  for (const [index, goal] of sampledGoals.entries()) {
+    parts.push(`Session goal ${index + 1}/${sampledGoals.length}: ${excerpt(goal, 150)}`);
   }
   if (assistants.length) {
-    parts.push(`Final result: ${excerpt(assistants.at(-1), 360)}`);
+    parts.push(`Latest outcome: ${excerpt(assistants.at(-1), 320)}`);
   }
   return {
     context: parts.join("\n"),

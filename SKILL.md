@@ -5,7 +5,7 @@ description: Use when every root Codex session needs manual semantic renaming.
 
 # Codex Session Renamer
 
-Generate semantic titles from the session's dominant goal, actual outcome, or final conclusion. Never use a raw first message, command, URL, or long prompt as the topic.
+Generate semantic titles from the dominant theme across the full conversation arc, refined by the actual outcome or final conclusion. Never use a raw first message, command, URL, or long prompt as the topic.
 
 Invoking `$codex-session-renamer` always resummarizes and renames every root Codex session, including already-dated and archived sessions.
 
@@ -14,7 +14,7 @@ Invoking `$codex-session-renamer` always resummarizes and renames every root Cod
 - Optional language: `language=<language>`. Accept a language name or BCP-47 tag, such as `English`, `zh-CN`, or `ja`.
 - An explicit language applies to both titles and the final report.
 - When omitted, choose each title's language from that session's dominant user-conversation language.
-- Detect the dominant language from recent meaningful user goals. Ignore code, logs, commands, URLs, and proper names.
+- Detect the dominant language from meaningful user goals sampled across the full session. Ignore code, logs, commands, URLs, and proper names.
 - If a session is ambiguous, fall back to its current title's language, then to the invoking conversation's language.
 - Write all user-visible progress messages and the final report in the explicit language, or otherwise in the invoking conversation's language.
 - Preserve project names, product names, code identifiers, and standard technical terms unless they have a clearly established localized form.
@@ -23,8 +23,8 @@ Invoking `$codex-session-renamer` always resummarizes and renames every root Cod
 
 1. Build `YYYY-MM-DD｜Core topic summary`.
 2. Use the last meaningful conversation date in the system's current local time zone. Ignore assistant commentary and fall back to the creation date only when no valid conversation timestamp exists.
-3. Write an original 10-28 character topic that conveys the dominant work and outcome at a glance.
-4. Prefer the final meaningful result or evolved goal over the initial request.
+3. Write an original 10-28 character topic that conveys the session's dominant work and outcome at a glance.
+4. Infer the core theme from the full goal arc. Use the latest outcome to refine the result, but do not let a minor late request replace the session's sustained main topic. Prefer a later goal only when the conversation clearly pivots and that pivot becomes the main body of work.
 5. Preserve distinguishing project, feature, PR, model, or document identifiers.
 6. Avoid vague topics such as `Task processing`, `General discussion`, `Continue changes`, `Imported session`, or their equivalents in other languages.
 7. Do not copy a sentence, command invocation, skill attachment, URL, or raw prompt.
@@ -35,7 +35,7 @@ Invoking `$codex-session-renamer` always resummarizes and renames every root Cod
 
 - When model selection is available, prefer a token-efficient model that can reliably follow the naming rules.
 - When model selection is unavailable, continue with the active Codex model; this skill cannot force a model change.
-- Use only the compact collected context, process at most 20 sessions per batch, and keep progress messages and the final report concise.
+- Use only the compact collected context: at most four user goals sampled across the session plus the latest non-commentary outcome. Process at most 20 sessions per batch, and keep progress messages and the final report concise.
 
 ## Manual Full Workflow
 
@@ -48,7 +48,7 @@ Invoking `$codex-session-renamer` always resummarizes and renames every root Cod
    node ~/.codex/skills/codex-session-renamer/scripts/collect-session-contexts.mjs --limit 20 --offset <offset>
    ```
 
-5. For each batch, use a matching list summary first, then the extracted recent goals and final result. Select the required language and generate a new compliant topic even when the current title already has a date.
+5. For each batch, use a matching list summary first, then the extracted full-session goal arc and latest non-commentary outcome. Identify the theme that persists across the session; treat late cleanup, reporting, handoff, or follow-up requests as supporting details unless the conversation clearly pivots. Select the required language and generate a new compliant topic even when the current title already has a date.
 6. Rename every returned session through `set_thread_title`. For an archived session, first set `archived: false`, rename it, then restore `archived: true`; direct archived renames may not persist.
 7. Continue with `nextOffset` until it is `null`. Do not stop after the first batch.
 8. Return a concise report containing renamed, skipped, and failed counts in the resolved report language.
