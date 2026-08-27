@@ -2,9 +2,9 @@
 
 [English](README.md) | [中文](README.zh-CN.md)
 
-Manually resummarize and rename every root Codex session as `YYYY-MM-DD｜Core topic summary`, using the dominant theme across the full conversation instead of copying its first or latest message.
+Manually repair recent root Codex session titles as `YYYY-MM-DD｜Core topic summary`, scanning newest-first and stopping at the first fully compliant batch.
 
-> **Disclaimer.** A full run changes every root Codex session title and has no built-in rollback. Read [SKILL.md](SKILL.md) before using it.
+> **Disclaimer.** Each noncompliant batch is fully renamed and there is no built-in rollback. Read [SKILL.md](SKILL.md) before using it.
 
 ## What it does
 
@@ -12,7 +12,7 @@ Manually resummarize and rename every root Codex session as `YYYY-MM-DD｜Core t
 | --- | --- |
 | Semantic titles | Uses the dominant theme across the full goal arc, refined by the actual outcome. |
 | Last conversation date | Prefixes every title with the date of its last meaningful conversation in the system's current time zone. |
-| Full manual run | Renames every root Codex session, including already-dated and archived sessions. |
+| Incremental manual run | Checks 20 newest-first; renames the whole batch when any title is invalid, then stops at the first fully compliant batch. |
 | Conversation-aware language | By default, each title follows its own session's dominant user language. |
 | Optional language | `language=<language>` forces one language for all titles and user-visible output. |
 | Token efficiency | Prefers a token-efficient model when model selection is available and uses compact session context. |
@@ -68,28 +68,27 @@ Codex will use its built-in Skill Installer to place the Skill under `$CODEX_HOM
 ### Automatically choose languages
 
 ```text
-Use $codex-session-renamer to manually resummarize and rename every root Codex session.
+Use $codex-session-renamer to repair recent root Codex session titles.
 ```
 
 ### Force one language
 
 ```text
-Use $codex-session-renamer language=English to manually resummarize and rename every root Codex session.
+Use $codex-session-renamer language=English to repair recent root Codex session titles.
 ```
 
 Replace `English` with a language name or BCP-47 tag such as `zh-CN` or `ja`.
 
-> **Important:** this Skill always performs a full rename. It has no incremental mode, scheduled mode, dry run, or automatic title backup.
+> **Important:** the Skill renames every session in a batch when any title in that batch is noncompliant. It has no scheduled mode, dry run, or automatic title backup.
 
 ## How it works
 
-1. Retrieves concise summaries for the 50 most recent Codex tasks.
-2. Reads root-session metadata and compact local context in batches of 20.
-3. Extracts each last meaningful conversation date, current title, up to four user goals sampled across the full session, and the latest non-commentary outcome.
-4. Chooses the required language and writes a concise semantic topic.
-5. Renames through Codex's official thread tools.
-6. Temporarily unarchives archived tasks, renames them, and restores their archived state.
-7. Continues until every root session has been considered.
+1. Orders root sessions by last conversation time, newest first.
+2. Checks 20 titles from database metadata without opening conversation files, and returns `batchCompliant` plus `noncompliantCount`.
+3. Stops immediately when all 20 titles match the date and topic rules.
+4. If any title is invalid, reads compact context for that batch and renames all 20 sessions.
+5. Temporarily unarchives archived tasks, renames them, and restores their archived state.
+6. Continues with the next batch until a compliant batch or the end is reached.
 
 ## What `agents/` and `scripts/` do
 
@@ -105,7 +104,7 @@ It improves the experience in Codex, but it does not scan or rename sessions.
 
 ### `scripts/`
 
-This folder contains the helper that prepares session information for Codex. It is required for a reliable full scan.
+This folder contains the helper that checks titles and prepares session information for Codex.
 
 In simple terms, the script:
 
@@ -113,7 +112,7 @@ In simple terms, the script:
 2. skips ChatGPT conversations and subagent sessions;
 3. opens each stored conversation and keeps only the last meaningful conversation date, current title, up to four user requests sampled across the conversation, and the latest non-commentary outcome;
 4. removes noisy content such as attached Skill text, code blocks, and page markup;
-5. returns up to 20 short session summaries at a time for Codex to rename.
+5. supports a lightweight `--check-only` metadata pass and opens conversation files only for batches that need renaming.
 
 The script only reads local files. It does not decide the new title, change the database, or rename anything by itself. Codex writes the title through its official session tools.
 

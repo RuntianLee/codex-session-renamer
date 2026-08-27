@@ -1,13 +1,13 @@
 ---
 name: codex-session-renamer
-description: Use when every root Codex session needs manual semantic renaming.
+description: Use for a manual, token-efficient scan that repairs recent Codex session titles until a fully compliant batch is reached.
 ---
 
 # Codex Session Renamer
 
 Generate semantic titles from the dominant theme across the full conversation arc, refined by the actual outcome or final conclusion. Never use a raw first message, command, URL, or long prompt as the topic.
 
-Invoking `$codex-session-renamer` always resummarizes and renames every root Codex session, including already-dated and archived sessions.
+Invoking `$codex-session-renamer` scans root Codex sessions from newest to oldest in batches of 20. A batch containing any noncompliant title is fully resummarized and renamed. The first fully compliant batch stops the run, so older sessions are not inspected.
 
 ## Language Selection
 
@@ -37,22 +37,30 @@ Invoking `$codex-session-renamer` always resummarizes and renames every root Cod
 - When model selection is unavailable, continue with the active Codex model; this skill cannot force a model change.
 - Use only the compact collected context: at most four user goals sampled across the session plus the latest non-commentary outcome. Process at most 20 sessions per batch, and keep progress messages and the final report concise.
 
-## Manual Full Workflow
+## Manual Incremental Workflow
 
 1. Resolve the optional language before generating any user-visible text.
-2. Find the Codex app `list_threads`, `set_thread_title`, and `set_thread_archived` tools.
-3. Call `list_threads` once with `limit: 50` to obtain high-quality summaries for recent sessions.
-4. Start at offset `0` and run:
+2. Find the Codex app `set_thread_title` and `set_thread_archived` tools.
+3. Start at offset `0` and run the lightweight title check:
+
+   ```bash
+   node ~/.codex/skills/codex-session-renamer/scripts/collect-session-contexts.mjs --check-only --limit 20 --offset <offset>
+   ```
+
+4. The collector already orders sessions by last conversation time descending. If `batchCompliant` is `true`, stop immediately. Do not inspect any older batch.
+5. If at least one session has `compliant: false`, rerun the same offset without `--check-only` to obtain compact full-session context:
 
    ```bash
    node ~/.codex/skills/codex-session-renamer/scripts/collect-session-contexts.mjs --limit 20 --offset <offset>
    ```
 
-5. For each batch, use a matching list summary first, then the extracted full-session goal arc and latest non-commentary outcome. Identify the theme that persists across the session; treat late cleanup, reporting, handoff, or follow-up requests as supporting details unless the conversation clearly pivots. Select the required language and generate a new compliant topic even when the current title already has a date.
-6. Rename every returned session through `set_thread_title`. For an archived session, first set `archived: false`, rename it, then restore `archived: true`; direct archived renames may not persist.
-7. Continue with `nextOffset` until it is `null`. Do not stop after the first batch.
-8. Return a concise report containing renamed, skipped, and failed counts in the resolved report language.
+6. Resummarize and rename every session in that batch, including titles that were already compliant. Identify the theme that persists across the full goal arc; treat late cleanup, reporting, handoff, or follow-up requests as supporting details unless the conversation clearly pivots.
+7. Rename through `set_thread_title`. For an archived session, first set `archived: false`, rename it, then restore `archived: true`; direct archived renames may not persist.
+8. Continue with that batch's `nextOffset` and repeat the lightweight check. Stop when `nextOffset` is `null` or the first fully compliant batch is found.
+9. Return a concise report containing checked, renamed, skipped, and failed counts, plus whether the run stopped on a compliant batch.
 
-If the local query fails, stop and report the error. Do not silently run a partial full rename because `list_threads` cannot return more than 50 sessions.
+Title compliance requires the exact computed date prefix, the full-width separator `｜`, a 10-28 character topic, and a complete title no longer than 40 characters.
+
+If the local query fails, stop and report the error. Never continue to older batches after a fully compliant batch.
 
 Never rename ChatGPT sessions or subagents. Never create or update an automation from this skill.

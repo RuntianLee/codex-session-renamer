@@ -15,6 +15,7 @@ if (requestedMode !== "all") {
   throw new Error(`Unsupported mode: ${requestedMode}`);
 }
 const mode = "all";
+const checkOnly = process.argv.includes("--check-only");
 
 const db = option("--db", join(homedir(), ".codex", "state_5.sqlite"));
 const defaultLimit = 20;
@@ -33,7 +34,8 @@ const query = `
     rollout_path,
     title,
     archived,
-    COALESCE(created_at_ms, created_at * 1000) AS created_at_ms
+    COALESCE(created_at_ms, created_at * 1000) AS created_at_ms,
+    recency_at_ms
   FROM threads
   WHERE COALESCE(thread_source, '') IN ('', 'user')
   ORDER BY recency_at_ms DESC, id DESC;
@@ -56,6 +58,15 @@ function formatDate(milliseconds) {
       .map(({ type, value }) => [type, value]),
   );
   return `${parts.year}-${parts.month}-${parts.day}`;
+}
+
+function compliantTitle(title, date) {
+  const prefix = `${date}｜`;
+  if (!title.startsWith(prefix)) return false;
+  const topicLength = Array.from(title.slice(prefix.length)).length;
+  return topicLength >= 10
+    && topicLength <= 28
+    && Array.from(title).length <= 40;
 }
 
 function cleanText(value) {
@@ -172,23 +183,32 @@ function collectContext(row) {
 const selectedRows = rows.slice(offset, offset + limit);
 const sessions = selectedRows.map(row => {
   const title = cleanText(row.title || "");
-  const collected = collectContext(row);
-  return {
+  const collected = checkOnly
+    ? { context: "", lastConversationAtMs: row.recency_at_ms }
+    : collectContext(row);
+  const date = formatDate(collected.lastConversationAtMs ?? row.created_at_ms);
+  const session = {
     id: row.id,
-    date: formatDate(collected.lastConversationAtMs ?? row.created_at_ms),
+    date,
     currentTitle: title,
     archived: Boolean(row.archived),
-    context: collected.context,
+    compliant: compliantTitle(title, date),
   };
+  if (!checkOnly) session.context = collected.context;
+  return session;
 });
 const nextOffset = offset + sessions.length < rows.length
   ? offset + sessions.length
   : null;
+const noncompliantCount = sessions.filter(session => !session.compliant).length;
 
 process.stdout.write(JSON.stringify({
   mode,
+  checkOnly,
   offset,
   total: rows.length,
   nextOffset,
+  batchCompliant: noncompliantCount === 0,
+  noncompliantCount,
   sessions,
 }));
