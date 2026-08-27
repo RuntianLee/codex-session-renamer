@@ -84,7 +84,7 @@ Replace `English` with a language name or BCP-47 tag such as `zh-CN` or `ja`.
 ## How it works
 
 1. Orders root sessions by last conversation time, newest first.
-2. Checks 20 titles from database metadata without opening conversation files, and returns `batchCompliant` plus `noncompliantCount`.
+2. Checks 20 titles using the latest session index title, reads only enough conversation data to compute the same meaningful date used by full mode, and returns `batchCompliant` plus `noncompliantCount`.
 3. Stops immediately when all 20 titles match the date and topic rules.
 4. If any title is invalid, reads compact context for that batch and renames all 20 sessions.
 5. Temporarily unarchives archived tasks, renames them, and restores their archived state.
@@ -110,9 +110,9 @@ In simple terms, the script:
 
 1. finds normal root sessions in Codex's local session list;
 2. skips ChatGPT conversations and subagent sessions;
-3. opens each stored conversation and keeps only the last meaningful conversation date, current title, up to four user requests sampled across the conversation, and the latest non-commentary outcome;
+3. reconciles stale database titles with the latest name in `session_index.jsonl`, then opens each stored conversation and keeps only the last meaningful conversation date, current title, up to four user requests sampled across the conversation, and the latest non-commentary outcome;
 4. removes noisy content such as attached Skill text, code blocks, and page markup;
-5. supports a lightweight `--check-only` metadata pass and opens conversation files only for batches that need renaming.
+5. supports a lightweight `--check-only` pass that emits no conversation context while using the same date calculation as full mode.
 
 The script only reads local files. It does not decide the new title, change the database, or rename anything by itself. Codex writes the title through its official session tools.
 

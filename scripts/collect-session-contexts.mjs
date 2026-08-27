@@ -18,6 +18,10 @@ const mode = "all";
 const checkOnly = process.argv.includes("--check-only");
 
 const db = option("--db", join(homedir(), ".codex", "state_5.sqlite"));
+const sessionIndex = option(
+  "--session-index",
+  join(homedir(), ".codex", "session_index.jsonl"),
+);
 const defaultLimit = 20;
 const requestedLimit = Number.parseInt(option("--limit", String(defaultLimit)), 10);
 const requestedOffset = Number.parseInt(option("--offset", "0"), 10);
@@ -44,6 +48,22 @@ const raw = execFileSync("sqlite3", ["-json", db, query], {
   encoding: "utf8",
 });
 const rows = raw.trim() ? JSON.parse(raw) : [];
+const latestTitles = new Map();
+if (existsSync(sessionIndex)) {
+  for (const line of readFileSync(sessionIndex, "utf8").split("\n")) {
+    if (!line.trim()) continue;
+    try {
+      const entry = JSON.parse(line);
+      if (typeof entry.id === "string"
+        && typeof entry.thread_name === "string"
+        && entry.thread_name.trim()) {
+        latestTitles.set(entry.id, entry.thread_name);
+      }
+    } catch {
+      // Ignore incomplete or legacy index records.
+    }
+  }
+}
 const formatter = new Intl.DateTimeFormat("en-CA", {
   year: "numeric",
   month: "2-digit",
@@ -127,7 +147,7 @@ function messageText(payload) {
     .join("\n");
 }
 
-function collectContext(row) {
+function collectSession(row, includeContext) {
   const users = [];
   const assistants = [];
   let lastConversationAtMs = null;
@@ -159,9 +179,13 @@ function collectContext(row) {
         && (lastConversationAtMs === null || messageAtMs > lastConversationAtMs)) {
         lastConversationAtMs = messageAtMs;
       }
-      if (isUser) users.push(text);
-      if (isAssistantResult) assistants.push(text);
+      if (includeContext && isUser) users.push(text);
+      if (includeContext && isAssistantResult) assistants.push(text);
     }
+  }
+
+  if (!includeContext) {
+    return { context: "", lastConversationAtMs };
   }
 
   const parts = [];
@@ -182,10 +206,8 @@ function collectContext(row) {
 
 const selectedRows = rows.slice(offset, offset + limit);
 const sessions = selectedRows.map(row => {
-  const title = cleanText(row.title || "");
-  const collected = checkOnly
-    ? { context: "", lastConversationAtMs: row.recency_at_ms }
-    : collectContext(row);
+  const title = cleanText(latestTitles.get(row.id) || row.title || "");
+  const collected = collectSession({ ...row, title }, !checkOnly);
   const date = formatDate(collected.lastConversationAtMs ?? row.created_at_ms);
   const session = {
     id: row.id,
