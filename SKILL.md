@@ -47,7 +47,7 @@ Invoking `$codex-session-renamer` scans root Codex sessions from newest to oldes
    node ~/.codex/skills/codex-session-renamer/scripts/collect-session-contexts.mjs --check-only --limit 20 --offset <offset>
    ```
 
-4. The collector already orders sessions by last conversation time descending. If `batchCompliant` is `true`, stop immediately. Do not inspect any older batch.
+4. The collector reconciles SQLite metadata with the latest title in `session_index.jsonl` and uses the same meaningful-conversation timestamp logic in check-only and context modes. It already orders sessions by last conversation time descending. If `batchCompliant` is `true`, stop immediately. Do not inspect any older batch.
 5. If at least one session has `compliant: false`, rerun the same offset without `--check-only` to obtain compact full-session context:
 
    ```bash
